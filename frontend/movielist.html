@@ -481,6 +481,54 @@
 <script src="js/plugins.js"></script>
 <script src="js/plugins2.js"></script>
 <script src="js/custom.js"></script>
+<script>
+    // Wait for the page to load
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Find the HTML element where you want to add the movies
+        // You'll need to check your movielist.html to find the right selector.
+        // I am guessing a class name here.
+        const movieContainer = document.querySelector('.movie-list-container'); 
+        
+        if (!movieContainer) {
+            console.error('Could not find movie container');
+            return;
+        }
+
+        // Call your Flask API's /movies endpoint
+        fetch('http://127.0.0.1:5000/movies')
+            .then(response => response.json())
+            .then(movies => {
+                
+                // Clear any placeholder content
+                movieContainer.innerHTML = ''; 
+                
+                // Loop through each movie from the API
+                movies.forEach(movie => {
+                    
+                    // Create the HTML for one movie
+                    // You must change this HTML to match the template's style
+                    const movieHtml = `
+                        <div class="movie-item">
+                            <h3>${movie.title} (${movie.year})</h3>
+                            <p>Genres: ${movie.genres.join(', ')}</p>
+                            <p>${movie.description}</p>
+                        </div>
+                    `;
+                    
+                    // Add the new HTML to the container
+                    movieContainer.insertAdjacentHTML('beforeend', movieHtml);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching movies:', error);
+                movieContainer.innerHTML = '<p>Error loading movies. Is the backend running?</p>';
+            });
+    });
+</script>
+
+</body>
+</html>
 </body>
 
 <!-- movielist07:38-->

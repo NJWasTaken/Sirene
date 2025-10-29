@@ -22,28 +22,55 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
-class Movie(db.Model):
-    """Simple Movie model mapped to the `movies` table in your `sirene` DB.
+# --- CORRECTED MODELS ---
 
-    Assumed columns: id (int primary key), title (str), year (int), genre (str), description (text).
-    If your schema differs, adjust this model accordingly.
+# Define the association table for the many-to-many relationship
+# This maps to the `media_genre` table in sirene.sql
+media_genre_table = db.Table('media_genre',
+    db.Column('MediaID', db.Integer, db.ForeignKey('media.MediaID'), primary_key=True),
+    db.Column('GenreID', db.Integer, db.ForeignKey('genre.GenreID'), primary_key=True)
+)
+
+class Media(db.Model):
     """
-    __tablename__ = 'movies'
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(255))
-    year = db.Column(db.Integer)
-    genre = db.Column(db.String(100))
-    description = db.Column(db.Text)
+    Maps to the `media` table in sirene.sql.
+    This replaces the old 'Movie' model.
+    """
+    __tablename__ = 'media'
+    
+    # Map columns from sirene.sql
+    id = db.Column('MediaID', db.Integer, primary_key=True)
+    title = db.Column('Title', db.String(255))
+    synopsis = db.Column('Synopsis', db.Text)
+    media_type = db.Column('MediaType', db.Enum('Movie','TV Show','Anime','Video Game'))
+    release_date = db.Column('ReleaseDate', db.Date)
+    duration_minutes = db.Column('DurationMinutes', db.Integer)
+
+    # Define the many-to-many relationship to Genre
+    genres = db.relationship('Genre', secondary=media_genre_table, lazy='subquery',
+        backref=db.backref('media', lazy=True))
 
     def to_dict(self):
+        """Converts the Media object to a dictionary."""
         return {
             'id': self.id,
             'title': self.title,
-            'year': self.year,
-            'genre': self.genre,
-            'description': self.description,
+            # Use the 'Synopsis' column for the 'description' field
+            'description': self.synopsis, 
+            'year': self.release_date.year if self.release_date else None,
+            'media_type': self.media_type,
+            # Add the list of genres from the relationship
+            'genres': [g.genre_name for g in self.genres] 
         }
 
+class Genre(db.Model):
+    """Maps to the `genre` table in sirene.sql."""
+    __tablename__ = 'genre'
+    id = db.Column('GenreID', db.Integer, primary_key=True)
+    genre_name = db.Column('GenreName', db.String(100), unique=True)
+
+
+# --- UPDATED ROUTES ---
 
 @app.route('/')
 def index():
@@ -52,9 +79,13 @@ def index():
 
 @app.route('/movies')
 def get_movies():
-    """Return first 100 movies as JSON. If the table is empty or missing, returns empty list or 500 with error."""
+    """
+    Return first 100 movies as JSON.
+    This now correctly queries the 'media' table.
+    """
     try:
-        movies = Movie.query.limit(100).all()
+        # Query the Media table, filter for 'Movie', limit to 100
+        movies = Media.query.filter_by(media_type='Movie').limit(100).all()
         return jsonify([m.to_dict() for m in movies])
     except Exception as e:
         return jsonify({'error': 'could not fetch movies', 'details': str(e)}), 500
@@ -65,7 +96,8 @@ def health():
     """Simple DB health check."""
     try:
         # lightweight check
-        db.session.execute(str('SELECT 1'))
+        with db.engine.connect() as conn:
+            conn.execute(db.text('SELECT 1'))
         return jsonify({'db': 'ok'}), 200
     except Exception as e:
         return jsonify({'db': 'error', 'details': str(e)}), 500
@@ -73,4 +105,4 @@ def health():
 
 if __name__ == '__main__':
     # If you run locally, set env vars or create a .env file. See README.md
-    app.run(debug=True)
+    app.run(debug=True, port=5000) # Running on port 5000
