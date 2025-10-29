@@ -65,7 +65,7 @@ def health():
     """Simple DB health check."""
     try:
         # lightweight check
-        db.session.execute('SELECT 1')
+        db.session.execute(str('SELECT 1'))
         return jsonify({'db': 'ok'}), 200
     except Exception as e:
         return jsonify({'db': 'error', 'details': str(e)}), 500
