@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}{{ media.Title }} - Sirene{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Media Header -->
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Poster -->
+            <div class="md:col-span-1">
+                <img src="https://via.placeholder.com/300x450/2c313a/ffffff?text={{ media.Title|urlencode }}" 
+                     alt="{{ media.Title }}" 
+                     class="w-full rounded-lg shadow-lg">
+            </div>
+            
+            <!-- Details -->
+            <div class="md:col-span-2">
+                <h1 class="text-4xl font-bold mb-2">{{ media.Title }}</h1>
+                
+                <!-- Media Type Badge -->
+                <span class="inline-block px-3 py-1 bg-brand-red text-white text-sm font-semibold rounded-full mb-4">
+                    {{ media.MediaType }}
+                </span>
+                
+                <!-- Genres -->
+                {% if media.genres %}
+                <div class="mb-4">
+                    {% for genre in media.genres.split(',') %}
+                    <span class="inline-block px-3 py-1 bg-brand-light-gray text-gray-300 text-sm rounded-full mr-2 mb-2">
+                        {{ genre }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- Synopsis -->
+                <p class="text-gray-300 mb-4">{{ media.Synopsis }}</p>
+                
+                <!-- Meta Information -->
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    {% if media.ReleaseDate %}
+                    <div>
+                        <span class="text-gray-400">Release Date:</span>
+                        <span class="text-white ml-2">{{ media.ReleaseDate.strftime('%B %d, %Y') }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if media.DurationMinutes %}
+                    <div>
+                        <span class="text-gray-400">Duration:</span>
+                        <span class="text-white ml-2">{{ media.DurationMinutes }} minutes</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Platforms -->
+                {% if platforms %}
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold mb-2">Available On:</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for platform in platforms %}
+                        <span class="px-3 py-1 bg-brand-black text-white rounded-lg">
+                            {{ platform.PlatformName }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Cast & Crew -->
+    {% if people %}
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Cast & Crew</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for person in people %}
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-brand-light-gray rounded-full flex items-center justify-center">
+                    <span class="text-lg font-bold">{{ person.Name[0] }}</span>
+                </div>
+                <div>
+                    <p class="font-semibold">{{ person.Name }}</p>
+                    <p class="text-sm text-gray-400">{{ person.Role }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Episodes (for TV Shows/Anime) -->
+    {% if episodes %}
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Episodes</h2>
+        <div class="space-y-3">
+            {% for episode in episodes %}
+            <div class="bg-brand-black rounded-lg p-4 hover:bg-brand-light-gray transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-semibold">
+                            S{{ episode.SeasonNumber }}E{{ episode.EpisodeNumber }}: {{ episode.Title }}
+                        </h3>
+                        {% if episode.ReleaseDate %}
+                        <p class="text-sm text-gray-400">{{ episode.ReleaseDate.strftime('%B %d, %Y') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Awards -->
+    {% if awards %}
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Awards</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for award in awards %}
+            <div class="bg-brand-black rounded-lg p-4">
+                <p class="font-semibold text-brand-red">{{ award.AwardName }}</p>
+                <p class="text-sm">{{ award.AwardCategory }}</p>
+                <p class="text-sm text-gray-400">
+                    {{ award.YearWon }}
+                    {% if award.PersonName %}- {{ award.PersonName }}{% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Reviews -->
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Reviews</h2>
+        
+        <!-- Add Review Form -->
+        <div class="bg-brand-black rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold mb-3">Write a Review</h3>
+            <form id="review-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Rating</label>
+                    <select id="rating" name="rating" class="w-full px-3 py-2 bg-brand-gray border border-brand-light-gray rounded-lg text-white">
+                        {% for i in range(10, 0, -1) %}
+                        <option value="{{ i }}">{{ i }}/10</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Comment</label>
+                    <textarea id="comment" name="comment" rows="3" 
+                              class="w-full px-3 py-2 bg-brand-gray border border-brand-light-gray rounded-lg text-white"
+                              placeholder="Share your thoughts..."></textarea>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-red-600 transition">
+                    Submit Review
+                </button>
+            </form>
+        </div>
+        
+        <!-- Reviews List -->
+        {% if reviews %}
+        <div class="space-y-4">
+            {% for review in reviews %}
+            <div class="bg-brand-black rounded-lg p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="font-semibold">{{ review.Username }}</span>
+                        <span class="ml-2 px-2 py-1 bg-brand-red text-white text-sm rounded">
+                            {{ review.Rating }}/10
+                        </span>
+                    </div>
+                    <span class="text-sm text-gray-400">{{ review.ReviewDate.strftime('%B %d, %Y') }}</span>
+                </div>
+                {% if review.Comment %}
+                <p class="text-gray-300">{{ review.Comment }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400">No reviews yet. Be the first to review!</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.getElementById('review-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const rating = document.getElementById('rating').value;
+    const comment = document.getElementById('comment').value;
+    
+    try {
+        const response = await fetch('/api/review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                media_id: {{ media.MediaID }},
+                rating: rating,
+                comment: comment
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to submit review: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error submitting review');
+        console.error(error);
+    }
+});
+</script>
+{% endblock %}

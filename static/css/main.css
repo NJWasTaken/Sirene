@@ -1,0 +1,156 @@
+/* Custom scrollbar styles */
+.carousel-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+.carousel-scrollbar::-webkit-scrollbar-track {
+    background: #1a1d23;
+    border-radius: 4px;
+}
+.carousel-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5a309;
+    border-radius: 4px;
+}
+.carousel-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #c28a08;
+}
+
+/* Gradient for Hero */
+.hero-gradient {
+    background: linear-gradient(to top, #0b0c0f 20%, rgba(11, 12, 15, 0) 100%);
+}
+.hero-gradient-left {
+    background: linear-gradient(to right, #0b0c0f 10%, rgba(11, 12, 15, 0.5) 70%, rgba(11, 12, 15, 0) 100%);
+}
+
+/* Search results scrollbar */
+.search-results-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.search-results-scrollbar::-webkit-scrollbar-track {
+    background: #1a1d23;
+    border-radius: 4px;
+}
+.search-results-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5a309;
+    border-radius: 4px;
+}
+.search-results-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #c28a08;
+}
+
+/* Aspect ratio utility classes */
+.aspect-w-2 {
+    position: relative;
+    padding-bottom: 150%; /* 2:3 aspect ratio */
+}
+.aspect-h-3 {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+/* Line clamp utility */
+.line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+.line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* Animation classes */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Form focus states */
+input:focus, textarea:focus, select:focus {
+    outline: 2px solid #e5a309;
+    outline-offset: 2px;
+}
+
+/* Hover effects for cards */
+.group:hover .group-hover\:scale-105 {
+    transform: scale(1.05);
+}
+
+/* Transitions */
+.transition {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.transition-transform {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.transition-colors {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* Custom dropdown arrow for select */
+select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA3AF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+}
+
+/* Hide scrollbar for carousel on mobile */
+@media (max-width: 640px) {
+    .carousel-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .carousel-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
+/* Responsive grid adjustments */
+@media (min-width: 640px) {
+    .sm\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 768px) {
+    .md\:grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .lg\:grid-cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1280px) {
+    .xl\:grid-cols-5 {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
