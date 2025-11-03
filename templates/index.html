@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Sirene - Browse Entertainment{% endblock %}
+{% block title %}Sirène - Browse Entertainment{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -22,41 +22,30 @@
             Discover your next favorite movie, TV show, or anime. Browse our extensive collection of entertainment content.
         </p>
         <div class="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            {% if logged_in %}
             <a href="{{ url_for('search') }}" class="flex items-center justify-center px-8 py-3 bg-brand-red text-white text-lg font-bold rounded-lg shadow-lg hover:bg-gold-600 transition duration-300 transform hover:scale-105">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
                 </svg>
                 Browse All
             </a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="flex items-center justify-center px-8 py-3 bg-brand-red text-white text-lg font-bold rounded-lg shadow-lg hover:bg-gold-600 transition duration-300 transform hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                    <path d="M7 11a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" />
+                </svg>
+                Sign In
+            </a>
+            {% endif %}
         </div>
     </div>
 </section>
 
 <!-- Content Sections -->
 <section class="container mx-auto px-4 sm:px-6 lg:px-8 -mt-16 md:-mt-24 relative z-20 space-y-12">
-    
-    <!-- Trending Content -->
-    <div>
-        <h2 class="text-2xl font-bold mb-4">Trending Now</h2>
-        <div id="carousel-trending" class="flex overflow-x-auto carousel-scrollbar space-x-4 py-4">
-            <!-- Content will be loaded dynamically -->
-            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
-            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
-            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
-        </div>
-    </div>
 
-    <!-- Top Rated -->
-    <div>
-        <h2 class="text-2xl font-bold mb-4">Top Rated</h2>
-        <div id="carousel-top-rated" class="flex overflow-x-auto carousel-scrollbar space-x-4 py-4">
-            <!-- Content will be loaded dynamically -->
-            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
-            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
-            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
-        </div>
-    </div>
-
+    {% if logged_in %}
     <!-- Movies -->
     <div>
         <h2 class="text-2xl font-bold mb-4">Movies</h2>
@@ -90,12 +79,17 @@
         </div>
     </div>
 
+    {% endif %}
+
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // Inject login state from server
+    const loggedIn = {{ logged_in | tojson }};
+
     // Function to create media card
     const createMediaCard = (item) => {
         const placeholderImg = `https://via.placeholder.com/200x300/2c313a/ffffff?text=${encodeURIComponent(item.Title)}`;
@@ -113,6 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchAndPopulate = async (endpoint, containerId) => {
         try {
             const response = await fetch(endpoint);
+            if (!response.ok) {
+                // handle non-OK responses (401 etc.) gracefully
+                console.warn(`Received ${response.status} from ${endpoint}`);
+                return;
+            }
             const data = await response.json();
             const container = document.getElementById(containerId);
             
@@ -127,24 +126,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Load all content
-    fetchAndPopulate('/api/media/trending', 'carousel-trending');
-    fetchAndPopulate('/api/media/top-rated', 'carousel-top-rated');
-    fetchAndPopulate('/api/media/movies', 'carousel-movies');
-    fetchAndPopulate('/api/media/tv', 'carousel-tv');
-    fetchAndPopulate('/api/media/anime', 'carousel-anime');
+    if (loggedIn) {
+        // Load all content only for logged-in users
+        fetchAndPopulate('/api/media/trending', 'carousel-trending');
+        fetchAndPopulate('/api/media/top-rated', 'carousel-top-rated');
+        fetchAndPopulate('/api/media/movies', 'carousel-movies');
+        fetchAndPopulate('/api/media/tv', 'carousel-tv');
+        fetchAndPopulate('/api/media/anime', 'carousel-anime');
 
-    // Update hero with first trending item
-    fetch('/api/media/trending')
-        .then(response => response.json())
-        .then(data => {
-            if (data.length > 0) {
-                const hero = data[0];
-                document.getElementById('hero-title').textContent = hero.Title;
-                document.getElementById('hero-description').textContent = hero.Synopsis || 'Discover amazing content on Sirene';
-            }
-        })
-        .catch(error => console.error('Error updating hero:', error));
+        // Update hero with first trending item
+        fetch('/api/media/trending')
+            .then(response => {
+                if (!response.ok) throw new Error(`Status ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.length > 0) {
+                    const hero = data[0];
+                    document.getElementById('hero-title').textContent = hero.Title;
+                    document.getElementById('hero-description').textContent = hero.Synopsis || 'Discover amazing content on Sirene';
+                }
+            })
+            .catch(error => console.error('Error updating hero:', error));
+    } else {
+        // Not logged in: leave placeholders and optionally show CTA (already present in markup)
+        console.log('User not logged in — skipping API calls on homepage');
+    }
 });
 </script>
 {% endblock %}

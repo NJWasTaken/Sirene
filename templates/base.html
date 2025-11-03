@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sirene - Your Entertainment Hub{% endblock %}</title>
+    <title>{% block title %}Sirène - Your Entertainment Hub{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,7 +39,7 @@
             <!-- Logo and Main Nav -->
             <div class="flex items-center space-x-8">
                 <a href="{{ url_for('index') }}" class="text-3xl font-bold text-brand-red tracking-wider">
-                    SIRENE
+                    Sirène
                 </a>
                 
                 {% if session.user_id %}
@@ -75,8 +75,8 @@
                     Logout
                 </a>
                 {% else %}
-                <a href="{{ url_for('login') }}" class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-red-600 transition">
-                    Sign In
+                <a href="{{ url_for('register') }}" class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-red-600 transition">
+                    Register
                 </a>
                 {% endif %}
             </div>

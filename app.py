@@ -25,9 +25,10 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            # Check if this is an API route
+            # If this is an API route, return JSON 401 instead of redirecting
             if request.path.startswith('/api/'):
                 return jsonify({'error': 'Unauthorized', 'message': 'Please log in'}), 401
+            # For normal routes, redirect to login
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -36,7 +37,9 @@ def login_required(f):
 @app.route('/')
 def index():
     """Main browse page"""
-    return render_template('index.html')
+    # Pass login state to template so homepage JS can conditionally load API data
+    logged_in = 'user_id' in session
+    return render_template('index.html', logged_in=logged_in)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -160,7 +163,7 @@ def media_details(media_id):
     
     cur.close()
     
-    return render_template('media_details.html', 
+    return render_template('movie_details.html', 
                          media=media, 
                          people=people, 
                          reviews=reviews,
