@@ -33,6 +33,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Admin required decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if session.get('user_role') != 'admin':
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Routes
 @app.route('/')
 def index():
@@ -56,6 +67,7 @@ def login():
         if user and check_password_hash(user['PasswordHash'], password):
             session['user_id'] = user['UserID']
             session['username'] = user['Username']
+            session['user_role'] = user['UserRole']
             return redirect(url_for('index'))
         else:
             return render_template('login.html', error="Invalid credentials")
@@ -87,6 +99,171 @@ def register():
             return render_template('register.html', error="Username or email already exists")
     
     return render_template('register.html')
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard to manage content"""
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT * FROM media ORDER BY Title")
+    all_media = cur.fetchall()
+    cur.close()
+    return render_template('admin_dashboard.html', all_media=all_media)
+
+@app.route('/admin/media/new', methods=['GET', 'POST'])
+@admin_required
+def admin_add_media():
+    """Add a new media item"""
+    if request.method == 'POST':
+        title = request.form['title']
+        synopsis = request.form['synopsis']
+        media_type = request.form['media_type']
+        release_date = request.form['release_date'] or None
+        duration = request.form['duration'] or None
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            INSERT INTO media (Title, Synopsis, MediaType, ReleaseDate, DurationMinutes)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (title, synopsis, media_type, release_date, duration))
+        mysql.connection.commit()
+        cur.close()
+        
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('admin_edit_media.html', media=None, title="Add New Media")
+
+@app.route('/admin/media/<int:media_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_media(media_id):
+    """Edit an existing media item"""
+    cur = mysql.connection.cursor()
+    
+    if request.method == 'POST':
+        title = request.form['title']
+        synopsis = request.form['synopsis']
+        media_type = request.form['media_type']
+        release_date = request.form['release_date'] or None
+        duration = request.form['duration'] or None
+
+        cur.execute("""
+            UPDATE media
+            SET Title = %s, Synopsis = %s, MediaType = %s, ReleaseDate = %s, DurationMinutes = %s
+            WHERE MediaID = %s
+        """, (title, synopsis, media_type, release_date, duration, media_id))
+        mysql.connection.commit()
+        cur.close()
+        
+        return redirect(url_for('admin_dashboard'))
+
+    # GET request: fetch media and show form
+    cur.execute("SELECT * FROM media WHERE MediaID = %s", [media_id])
+    media = cur.fetchone()
+    cur.close()
+    
+    if not media:
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('admin_edit_media.html', media=media, title="Edit Media")
+
+@app.route('/admin/media/<int:media_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_media(media_id):
+    """Delete a media item"""
+    cur = mysql.connection.cursor()
+    cur.execute("DELETE FROM media WHERE MediaID = %s", [media_id])
+    mysql.connection.commit()
+    cur.close()
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/media/<int:media_id>/assets', methods=['GET', 'POST'])
+@admin_required
+def admin_manage_media_assets(media_id):
+    """Manage images and videos for a media item"""
+    cur = mysql.connection.cursor()
+
+    if request.method == 'POST':
+        action_type = request.form.get('action_type')
+        
+        try:
+            if action_type == 'add_image':
+                cur.execute("""
+                    INSERT INTO mediaimage (MediaID, ImageUrl, Caption, Type, SortOrder)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (media_id, 
+                      request.form['image_url'], 
+                      request.form.get('caption'), 
+                      request.form['image_type'], 
+                      request.form.get('sort_order', 0)))
+            
+            elif action_type == 'add_video':
+                cur.execute("""
+                    INSERT INTO mediavideo (MediaID, VideoUrl, Title, Type, SortOrder)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (media_id,
+                      request.form['video_url'],
+                      request.form['video_title'],
+                      request.form['video_type'],
+                      request.form.get('sort_order', 0)))
+            
+            mysql.connection.commit()
+        except Exception as e:
+            mysql.connection.rollback()
+            print(f"Error adding asset: {e}") # Add flash messaging here for production
+            
+        return redirect(url_for('admin_manage_media_assets', media_id=media_id))
+
+    # GET request
+    cur.execute("SELECT * FROM media WHERE MediaID = %s", [media_id])
+    media = cur.fetchone()
+    cur.execute("SELECT * FROM mediaimage WHERE MediaID = %s ORDER BY Type, SortOrder", [media_id])
+    images = cur.fetchall()
+    cur.execute("SELECT * FROM mediavideo WHERE MediaID = %s ORDER BY Type, SortOrder", [media_id])
+    videos = cur.fetchall()
+    cur.close()
+
+    if not media:
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('admin_manage_media_assets.html', media=media, images=images, videos=videos)
+
+@app.route('/admin/image/<int:image_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_image(image_id):
+    """Delete an image asset"""
+    cur = mysql.connection.cursor()
+    # Get MediaID first to redirect back
+    cur.execute("SELECT MediaID FROM mediaimage WHERE ImageID = %s", [image_id])
+    result = cur.fetchone()
+    if result:
+        media_id = result['MediaID']
+        cur.execute("DELETE FROM mediaimage WHERE ImageID = %s", [image_id])
+        mysql.connection.commit()
+        cur.close()
+        return redirect(url_for('admin_manage_media_assets', media_id=media_id))
+    
+    cur.close()
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/video/<int:video_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_video(video_id):
+    """Delete a video asset"""
+    cur = mysql.connection.cursor()
+    # Get MediaID first to redirect back
+    cur.execute("SELECT MediaID FROM mediavideo WHERE VideoID = %s", [video_id])
+    result = cur.fetchone()
+    if result:
+        media_id = result['MediaID']
+        cur.execute("DELETE FROM mediavideo WHERE VideoID = %s", [video_id])
+        mysql.connection.commit()
+        cur.close()
+        return redirect(url_for('admin_manage_media_assets', media_id=media_id))
+
+    cur.close()
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/logout')
 def logout():
@@ -160,8 +337,24 @@ def media_details(media_id):
         WHERE aw.MediaID = %s
     """, [media_id])
     awards = cur.fetchall()
+
+    # Get images
+    cur.execute("""SELECT * FROM mediaimage 
+                WHERE MediaID = %s 
+                ORDER BY Type, SortOrder""", [media_id])
+    images = cur.fetchall()
+    
+    # Get videos
+    cur.execute("""SELECT * FROM mediavideo 
+                WHERE MediaID = %s 
+                ORDER BY Type, SortOrder""", [media_id])
+    videos = cur.fetchall()
     
     cur.close()
+
+    poster = next((img for img in images if img['Type'] == 'Poster'), None)
+    backdrop = next((img for img in images if img['Type'] == 'Backdrop'), None)
+    gallery = [img for img in images if img['Type'] == 'Gallery']
     
     return render_template('movie_details.html', 
                          media=media, 
@@ -169,7 +362,11 @@ def media_details(media_id):
                          reviews=reviews,
                          platforms=platforms,
                          episodes=episodes,
-                         awards=awards)
+                         awards=awards,
+                         poster=poster,
+                         backdrop=backdrop,
+                         gallery=gallery,
+                         videos=videos)
 
 @app.route('/search')
 @login_required

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Sirène{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-2xl">
+    <h1 class="text-3xl font-bold mb-6">{{ title }}</h1>
+
+    <form method="POST" class="bg-brand-gray rounded-lg p-6 space-y-4">
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-300">Title</label>
+            <input type="text" name="title" id="title" value="{{ media.Title if media else '' }}"
+                   class="mt-1 appearance-none rounded-md relative block w-full px-3 py-3 bg-brand-light-gray border border-brand-light-gray placeholder-gray-500 text-white focus:outline-none focus:ring-brand-red focus:border-brand-red sm:text-sm">
+        </div>
+
+        <div>
+            <label for="synopsis" class="block text-sm font-medium text-gray-300">Synopsis</label>
+            <textarea name="synopsis" id="synopsis" rows="5"
+                      class="mt-1 appearance-none rounded-md relative block w-full px-3 py-3 bg-brand-light-gray border border-brand-light-gray placeholder-gray-500 text-white focus:outline-none focus:ring-brand-red focus:border-brand-red sm:text-sm"
+            >{{ media.Synopsis if media else '' }}</textarea>
+        </div>
+
+        <div>
+            <label for="media_type" class="block text-sm font-medium text-gray-300">Media Type</label>
+            <select name="media_type" id="media_type"
+                    class="mt-1 appearance-none rounded-md relative block w-full px-3 py-3 bg-brand-light-gray border border-brand-light-gray text-white focus:outline-none focus:ring-brand-red focus:border-brand-red sm:text-sm">
+                <option value="Movie" {% if media and media.MediaType == 'Movie' %}selected{% endif %}>Movie</option>
+                <option value="TV Show" {% if media and media.MediaType == 'TV Show' %}selected{% endif %}>TV Show</option>
+                <option value="Anime" {% if media and media.MediaType == 'Anime' %}selected{% endif %}>Anime</option>
+                <option value="Video Game" {% if media and media.MediaType == 'Video Game' %}selected{% endif %}>Video Game</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="release_date" class="block text-sm font-medium text-gray-300">Release Date</label>
+            <input type="date" name="release_date" id="release_date" 
+                   value="{{ media.ReleaseDate.strftime('%Y-%m-%d') if media and media.ReleaseDate else '' }}"
+                   class="mt-1 appearance-none rounded-md relative block w-full px-3 py-3 bg-brand-light-gray border border-brand-light-gray text-white focus:outline-none focus:ring-brand-red focus:border-brand-red sm:text-sm">
+        </div>
+
+        <div>
+            <label for="duration" class="block text-sm font-medium text-gray-300">Duration (Minutes)</label>
+            <input type="number" name="duration" id="duration" value="{{ media.DurationMinutes if media else '' }}"
+                   class="mt-1 appearance-none rounded-md relative block w-full px-3 py-3 bg-brand-light-gray border border-brand-light-gray placeholder-gray-500 text-white focus:outline-none focus:ring-brand-red focus:border-brand-red sm:text-sm">
+        </div>
+
+        {% if media %}
+        <div style="padding-bottom: 20px; padding-top: 10px;">
+            <a href="{{ url_for('admin_manage_media_assets', media_id=media.MediaID) }}" 
+            class="px-4 py-2 w-full justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brand-red hover:text-black transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-red">
+                Manage Images & Videos
+            </a>
+        </div>
+        {% endif %}
+
+        <div>
+            <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brand-red hover:bg-red-600 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-red">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

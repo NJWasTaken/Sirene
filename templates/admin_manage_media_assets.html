@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Assets for {{ media.Title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-4xl">
+    <a href="{{ url_for('admin_edit_media', media_id=media.MediaID) }}" class="text-sm text-brand-red hover:text-red-500">&larr; Back to Edit Media</a>
+    <h1 class="text-3xl font-bold mt-2">Manage Assets</h1>
+    <h2 class="text-xl text-gray-400 mb-6">{{ media.Title }}</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <div class="bg-brand-gray rounded-lg p-6">
+            <h3 class="text-2xl font-bold mb-4">Images</h3>
+            
+            <form method="POST" class="mb-6 bg-brand-black p-4 rounded-lg space-y-3">
+                <input type="hidden" name="action_type" value="add_image">
+                <h4 class="text-lg font-semibold">Add New Image</h4>
+                <div>
+                    <label class="block text-sm">Image URL</label>
+                    <input type="url" name="image_url" placeholder="https://..." required
+                           class="w-full px-3 py-2 bg-brand-light-gray border border-brand-light-gray rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm">Type</label>
+                    <select name="image_type" class="w-full px-3 py-2 bg-brand-light-gray border border-brand-light-gray rounded-lg">
+                        <option value="Poster">Poster</option>
+                        <option value="Backdrop">Backdrop</option>
+                        <option value="Gallery">Gallery</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-2 bg-brand-red rounded-lg">Add Image</button>
+            </form>
+
+            <div class="space-y-2">
+                {% for img in images %}
+                <div class="flex items-center justify-between bg-brand-black p-2 rounded">
+                    <div class="flex items-center space-x-2">
+                        <img src="{{ img.ImageUrl }}" class="w-10 h-10 object-cover rounded">
+                        <span class="text-sm">{{ img.Type }}</span>
+                    </div>
+                    <form action="{{ url_for('admin_delete_image', image_id=img.ImageID) }}" method="POST">
+                        <button type="submit" class="text-red-500 text-sm">Delete</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="text-gray-400">No images found.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-brand-gray rounded-lg p-6">
+            <h3 class="text-2xl font-bold mb-4">Videos</h3>
+
+            <form method="POST" class="mb-6 bg-brand-black p-4 rounded-lg space-y-3">
+                <input type="hidden" name="action_type" value="add_video">
+                <h4 class="text-lg font-semibold">Add New Video</h4>
+                <div>
+                    <label class="block text-sm">Video URL (e.g., YouTube)</label>
+                    <input type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=..." required
+                           class="w-full px-3 py-2 bg-brand-light-gray border border-brand-light-gray rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm">Title</label>
+                    <input type="text" name="video_title" placeholder="Official Trailer" required
+                           class="w-full px-3 py-2 bg-brand-light-gray border border-brand-light-gray rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm">Type</label>
+                    <select name="video_type" class="w-full px-3 py-2 bg-brand-light-gray border border-brand-light-gray rounded-lg">
+                        <option value="Trailer">Trailer</option>
+                        <option value="Teaser">Teaser</option>
+                        <option value="Clip">Clip</option>
+                        <option value="Featurette">Featurette</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-2 bg-brand-red rounded-lg">Add Video</button>
+            </form>
+
+            <div class="space-y-2">
+                {% for vid in videos %}
+                <div class="flex items-center justify-between bg-brand-black p-2 rounded">
+                    <span class="text-sm">{{ vid.Title }} ({{ vid.Type }})</span>
+                    <form action="{{ url_for('admin_delete_video', video_id=vid.VideoID) }}" method="POST">
+                        <button type="submit" class="text-red-500 text-sm">Delete</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="text-gray-400">No videos found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

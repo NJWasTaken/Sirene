@@ -3,15 +3,28 @@
 {% block title %}{{ media.Title }} - Sirène{% endblock %}
 
 {% block content %}
+
+{% if backdrop %}
+<div class="absolute top-0 left-0 right-0 h-[60vh] -z-10">
+    <img src="{{ backdrop.ImageUrl }}" alt="{{ media.Title }} backdrop" class="w-full h-full object-cover opacity-30">
+    <div class="absolute inset-0 hero-gradient"></div>
+</div>
+{% endif %}
+
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Media Header -->
     <div class="bg-brand-gray rounded-lg p-6 mb-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Poster -->
             <div class="md:col-span-1">
+                
+                {% if poster %}
+                <img src="{{ poster.ImageUrl }}" alt="{{ media.Title }} poster" class="w-full rounded-lg shadow-lg">
+                {% else %}
                 <img src="https://via.placeholder.com/300x450/2c313a/ffffff?text={{ media.Title|urlencode }}" 
                      alt="{{ media.Title }}" 
                      class="w-full rounded-lg shadow-lg">
+                {% endif %}
             </div>
             
             <!-- Details -->
@@ -70,6 +83,31 @@
             </div>
         </div>
     </div>
+    
+    {% if videos %}
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Trailers & Videos</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for video in videos %}
+                {% set embed_url = video.VideoUrl %}
+                {% if 'youtube.com' in video.VideoUrl or 'youtu.be' in video.VideoUrl %}
+                    {% set video_id = video.VideoUrl.split('v=')[-1].split('&')[0].split('/')[-1] %}
+                    {% set embed_url = 'https://www.youtube.com/embed/' + video_id %}
+                {% endif %}
+                
+                <div class="aspect-w-16 aspect-h-9">
+                    <iframe src="{{ embed_url }}" 
+                            title="{{ video.Title }}" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen
+                            class="w-full h-full rounded-lg">
+                    </iframe>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Cast & Crew -->
     {% if people %}

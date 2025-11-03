@@ -269,6 +269,66 @@ INSERT INTO `media_productioncompany` VALUES (1,1),(2,2),(3,2),(3,3),(4,4),(5,5)
 UNLOCK TABLES;
 
 --
+-- Table structure for table `mediaimage`
+--
+
+DROP TABLE IF EXISTS `mediaimage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `mediaimage` (
+  `ImageID` int NOT NULL AUTO_INCREMENT,
+  `MediaID` int NOT NULL,
+  `ImageUrl` varchar(255) NOT NULL,
+  `Caption` varchar(255) DEFAULT NULL,
+  `SortOrder` int DEFAULT '0',
+  `Type` enum('Poster','Backdrop','Gallery') NOT NULL,
+  PRIMARY KEY (`ImageID`),
+  KEY `MediaID` (`MediaID`),
+  CONSTRAINT `mediaimage_ibfk_1` FOREIGN KEY (`MediaID`) REFERENCES `media` (`MediaID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mediaimage`
+--
+
+LOCK TABLES `mediaimage` WRITE;
+/*!40000 ALTER TABLE `mediaimage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mediaimage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `mediavideo`
+--
+
+DROP TABLE IF EXISTS `mediavideo`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `mediavideo` (
+  `VideoID` int NOT NULL AUTO_INCREMENT,
+  `MediaID` int NOT NULL,
+  `VideoUrl` varchar(255) NOT NULL,
+  `Title` varchar(255) NOT NULL,
+  `DurationSeconds` int DEFAULT NULL,
+  `ThumbnailUrl` varchar(255) DEFAULT NULL,
+  `SortOrder` int DEFAULT '0',
+  `Type` enum('Trailer','Teaser','Clip','Featurette') NOT NULL,
+  PRIMARY KEY (`VideoID`),
+  KEY `MediaID` (`MediaID`),
+  CONSTRAINT `mediavideo_ibfk_1` FOREIGN KEY (`MediaID`) REFERENCES `media` (`MediaID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mediavideo`
+--
+
+LOCK TABLES `mediavideo` WRITE;
+/*!40000 ALTER TABLE `mediavideo` DISABLE KEYS */;
+/*!40000 ALTER TABLE `mediavideo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `person`
 --
 
@@ -369,7 +429,7 @@ CREATE TABLE `review` (
   CONSTRAINT `review_ibfk_3` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON DELETE CASCADE,
   CONSTRAINT `review_ibfk_4` FOREIGN KEY (`MediaID`) REFERENCES `media` (`MediaID`) ON DELETE CASCADE,
   CONSTRAINT `review_chk_1` CHECK (((`Rating` >= 0) and (`Rating` <= 10)))
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -378,7 +438,7 @@ CREATE TABLE `review` (
 
 LOCK TABLES `review` WRITE;
 /*!40000 ALTER TABLE `review` DISABLE KEYS */;
-INSERT INTO `review` VALUES (1,1,1,9.5,'One of the greatest TV shows ever made. Incredible writing and acting.','2025-10-15 07:04:18'),(2,3,3,9.0,'A masterpiece of storytelling and animation. The final season was epic!','2025-10-15 07:04:18'),(3,2,5,8.8,'Brilliantly written satire. The characters are awful people, but you can\'t stop watching.','2025-10-15 07:04:18'),(4,1,7,9.2,'A thrilling movie that keeps you on the edge of your seat. A must-watch.','2025-10-15 07:04:18');
+INSERT INTO `review` VALUES (1,1,1,9.5,'One of the greatest TV shows ever made. Incredible writing and acting.','2025-10-15 07:04:18'),(2,3,3,9.0,'A masterpiece of storytelling and animation. The final season was epic!','2025-10-15 07:04:18'),(3,2,5,8.8,'Brilliantly written satire. The characters are awful people, but you can\'t stop watching.','2025-10-15 07:04:18'),(4,1,7,9.2,'A thrilling movie that keeps you on the edge of your seat. A must-watch.','2025-10-15 07:04:18'),(5,4,1,10.0,'yeah i mean its pretty good','2025-11-03 16:19:17');
 /*!40000 ALTER TABLE `review` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -395,10 +455,11 @@ CREATE TABLE `users` (
   `Email` varchar(255) NOT NULL,
   `PasswordHash` varchar(255) NOT NULL,
   `CreatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `UserRole` enum('user','admin') NOT NULL DEFAULT 'user',
   PRIMARY KEY (`UserID`),
   UNIQUE KEY `Username` (`Username`),
   UNIQUE KEY `Email` (`Email`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -407,7 +468,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'moviefanatic','fanatic@email.com','hashed_password_123','2025-10-15 07:03:36'),(2,'serieswatcher','watcher@email.com','hashed_password_456','2025-10-15 07:03:36'),(3,'animeguru','guru@email.com','hashed_password_789','2025-10-15 07:03:36');
+INSERT INTO `users` VALUES (1,'moviefanatic','fanatic@email.com','hashed_password_123','2025-10-15 07:03:36','user'),(2,'serieswatcher','watcher@email.com','hashed_password_456','2025-10-15 07:03:36','user'),(3,'animeguru','guru@email.com','hashed_password_789','2025-10-15 07:03:36','user'),(4,'Noel','noelgjose05@gmail.com','scrypt:32768:8:1$S4wcbE0wINFOKxKT$8970550b67898ac3e321895c9969e7dd1d7e46c9f30f6e606daff94c46d5d5b81959453984f53aeeffda4b16027be6f53402af9f5660b2e1194aad3d91d321ea','2025-10-31 07:02:07','admin'),(5,'test','test@test.com','scrypt:32768:8:1$2orwVOxwbwcAP4NW$98188a15bccdb7c752a2ad0e014cf3419dd421cbbdb623a627297eed751125ae875b41d91b73edd03771002b905bbb251cc07f3d0731a2278ec72dfb5e3b8ddc','2025-11-03 16:41:26','user');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -420,4 +481,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-15 12:43:04
+-- Dump completed on 2025-11-03 22:16:19
