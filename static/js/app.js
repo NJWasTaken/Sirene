@@ -4,10 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchCloseBtn = document.getElementById('search-close-button');
     const searchOverlay = document.getElementById('search-overlay');
     const searchInput = document.getElementById('search-input');
+    const searchResultsList = document.getElementById('search-results-list');
+    let searchTimeout = null;
 
     if (searchOpenBtn && searchOverlay) {
         searchOpenBtn.addEventListener('click', () => {
             searchOverlay.classList.remove('hidden');
+            searchOverlay.style.display = 'block';
+            searchOverlay.style.pointerEvents = 'auto';
             if (searchInput) searchInput.focus();
         });
     }
@@ -15,7 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchCloseBtn && searchOverlay) {
         searchCloseBtn.addEventListener('click', () => {
             searchOverlay.classList.add('hidden');
+            searchOverlay.style.display = 'none';
+            searchOverlay.style.pointerEvents = 'none';
             if (searchInput) searchInput.value = '';
+            if (searchResultsList) searchResultsList.innerHTML = '';
         });
     }
 
@@ -23,9 +30,116 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && searchOverlay && !searchOverlay.classList.contains('hidden')) {
             searchOverlay.classList.add('hidden');
+            searchOverlay.style.display = 'none';
+            searchOverlay.style.pointerEvents = 'none';
             if (searchInput) searchInput.value = '';
+            if (searchResultsList) searchResultsList.innerHTML = '';
         }
     });
+
+    // Search autocomplete functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // If query is too short, clear results
+            if (query.length < 2) {
+                if (searchResultsList) searchResultsList.innerHTML = '';
+                return;
+            }
+
+            // Show loading state
+            if (searchResultsList) {
+                searchResultsList.innerHTML = '<div class="text-center text-gray-400 py-4">Searching...</div>';
+            }
+
+            // Debounce search requests
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/search?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(results => {
+                        displaySearchResults(results);
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        if (searchResultsList) {
+                            searchResultsList.innerHTML = '<div class="text-center text-red-400 py-4">Error loading results</div>';
+                        }
+                    });
+            }, 300); // Wait 300ms after user stops typing
+        });
+
+        // Handle Enter key to go to full search results
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = searchInput.value.trim();
+                if (query) {
+                    // Completely remove the overlay from DOM before navigating
+                    if (searchOverlay) {
+                        searchOverlay.remove();
+                    }
+                    // Navigate immediately
+                    window.location.href = `/search?q=${encodeURIComponent(query)}`;
+                }
+            }
+        });
+    }
+
+    // Completely remove search overlay on page load if we're on the search page
+    if (window.location.pathname === '/search' && searchOverlay) {
+        searchOverlay.remove();
+    }
+
+    // Display search results in dropdown
+    function displaySearchResults(results) {
+        if (!searchResultsList) return;
+
+        if (results.length === 0) {
+            searchResultsList.innerHTML = '<div class="text-center text-gray-400 py-4">No results found</div>';
+            return;
+        }
+
+        searchResultsList.innerHTML = results.map(item => `
+            <a href="/media/${item.id}" class="search-result-link flex items-start gap-4 p-4 bg-brand-gray rounded-lg hover:bg-brand-light-gray transition group">
+                <div class="flex-shrink-0 w-16 h-24 bg-brand-light-gray rounded overflow-hidden">
+                    ${item.poster_url 
+                        ? `<img src="${item.poster_url}" alt="${item.title}" class="w-full h-full object-cover">`
+                        : `<div class="w-full h-full flex items-center justify-center text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>`
+                    }
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold text-white group-hover:text-brand-red transition truncate">${item.title}</h3>
+                    <div class="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                        <span class="px-2 py-0.5 bg-brand-red/20 text-brand-red rounded text-xs">${item.media_type}</span>
+                        ${item.release_date ? `<span>${item.release_date.split('-')[0]}</span>` : ''}
+                        ${item.avg_rating > 0 ? `<span>⭐ ${item.avg_rating.toFixed(1)}</span>` : ''}
+                    </div>
+                    ${item.synopsis ? `<p class="text-sm text-gray-400 mt-2 line-clamp-2">${item.synopsis}</p>` : ''}
+                </div>
+            </a>
+        `).join('');
+
+        // Add click event listeners to close overlay when clicking suggestions
+        document.querySelectorAll('.search-result-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (searchOverlay) {
+                    searchOverlay.classList.add('hidden');
+                    searchOverlay.style.display = 'none';
+                    searchOverlay.style.pointerEvents = 'none';
+                }
+            });
+        });
+    }
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

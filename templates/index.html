@@ -3,42 +3,28 @@
 {% block title %}Sirène - Browse Entertainment{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="relative h-[85vh] min-h-[500px] max-h-[800px] w-full flex items-end text-white">
-    <div class="absolute inset-0">
-        <img src="https://via.placeholder.com/1920x1080/1a1d23/e50914?text=Featured+Content" 
-             alt="Featured Show" 
-             id="hero-bg-image"
-             class="w-full h-full object-cover">
-        <div class="absolute inset-0 hero-gradient"></div>
-        <div class="absolute inset-0 hero-gradient-left"></div>
+<!-- Hero Carousel Section -->
+<section class="relative h-[85vh] min-h-[500px] max-h-[800px] w-full flex items-end text-white overflow-hidden">
+    <!-- Carousel Container -->
+    <div id="hero-carousel" class="absolute inset-0">
+        <!-- Slides will be dynamically inserted here -->
     </div>
     
-    <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pb-16 md:pb-24 lg:pb-32 w-full md:w-2/3 lg:w-1/2">
-        <h1 id="hero-title" class="text-4xl sm:text-5xl lg:text-7xl font-black uppercase tracking-wide drop-shadow-lg">
-            Welcome to Sirene
-        </h1>
-        <p id="hero-description" class="mt-4 text-lg sm:text-xl text-gray-200 max-w-xl drop-shadow-md">
-            Discover your next favorite movie, TV show, or anime. Browse our extensive collection of entertainment content.
-        </p>
-        <div class="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-            {% if logged_in %}
-            <a href="{{ url_for('search') }}" class="flex items-center justify-center px-8 py-3 bg-brand-red text-white text-lg font-bold rounded-lg shadow-lg hover:bg-gold-600 transition duration-300 transform hover:scale-105">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-                </svg>
-                Browse All
-            </a>
-            {% else %}
-            <a href="{{ url_for('login') }}" class="flex items-center justify-center px-8 py-3 bg-brand-red text-white text-lg font-bold rounded-lg shadow-lg hover:text-black transition duration-300 transform hover:scale-105">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
-                    <path d="M7 11a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" />
-                </svg>
-                Sign In
-            </a>
-            {% endif %}
-        </div>
+    <!-- Navigation Arrows -->
+    <button id="hero-prev" class="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/80 p-3 rounded-full transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </button>
+    <button id="hero-next" class="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/80 p-3 rounded-full transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </button>
+    
+    <!-- Carousel Indicators -->
+    <div id="hero-indicators" class="absolute bottom-32 left-1/2 -translate-x-1/2 z-20 flex space-x-2">
+        <!-- Dots will be dynamically inserted here -->
     </div>
 </section>
 
@@ -85,17 +71,145 @@
 {% endblock %}
 
 {% block scripts %}
+<script id="server-data" type="application/json">
+{"logged_in": {{ logged_in | tojson }}}
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject login state from server
-    const loggedIn = {{ logged_in | tojson }};
+    const serverData = JSON.parse(document.getElementById('server-data').textContent);
+    const loggedIn = serverData.logged_in;
+
+    // Hero Carousel State
+    let featuredMedia = [];
+    let currentSlide = 0;
+    let autoplayInterval;
+
+    // Create Hero Slide
+    const createHeroSlide = (item, isActive) => {
+        const backdropImg = item.backdrop_url || `https://via.placeholder.com/1920x1080/1a1d23/e50914?text=${encodeURIComponent(item.Title)}`;
+        const synopsis = item.Synopsis || 'No description available.';
+        const truncatedSynopsis = synopsis.length > 200 ? synopsis.substring(0, 200) + '...' : synopsis;
+        
+        return `
+            <div class="hero-slide ${isActive ? 'active' : ''}" data-slide-index="${featuredMedia.indexOf(item)}">
+                <div class="absolute inset-0">
+                    <img src="${backdropImg}" alt="${item.Title}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 hero-gradient"></div>
+                    <div class="absolute inset-0 hero-gradient-left"></div>
+                </div>
+                
+                <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pb-16 md:pb-24 lg:pb-32 w-full md:w-2/3 lg:w-1/2 h-full flex flex-col justify-end">
+                    <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black uppercase tracking-wide drop-shadow-lg">
+                        ${item.Title}
+                    </h1>
+                    <p class="mt-4 text-lg sm:text-xl text-gray-200 max-w-xl drop-shadow-md">
+                        ${truncatedSynopsis}
+                    </p>
+                    <div class="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <a href="/media/${item.MediaID}" class="flex items-center justify-center px-8 py-3 bg-brand-red text-white text-lg font-bold rounded-lg shadow-lg hover:bg-red-700 transition duration-300 transform hover:scale-105">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    // Initialize Hero Carousel
+    const initHeroCarousel = async () => {
+        if (!loggedIn) return;
+        
+        try {
+            const response = await fetch('/api/media/featured');
+            if (!response.ok) return;
+            
+            featuredMedia = await response.json();
+            if (featuredMedia.length === 0) return;
+            
+            const carousel = document.getElementById('hero-carousel');
+            carousel.innerHTML = featuredMedia.map((item, index) => 
+                createHeroSlide(item, index === 0)
+            ).join('');
+            
+            // Create indicators
+            const indicators = document.getElementById('hero-indicators');
+            indicators.innerHTML = featuredMedia.map((_, index) => 
+                `<button class="hero-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></button>`
+            ).join('');
+            
+            // Add indicator click handlers
+            document.querySelectorAll('.hero-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const slideIndex = parseInt(dot.dataset.slide);
+                    goToSlide(slideIndex);
+                });
+            });
+            
+            // Start autoplay
+            startAutoplay();
+            
+        } catch (error) {
+            console.error('Failed to load featured media:', error);
+        }
+    };
+
+    // Navigate to specific slide
+    const goToSlide = (index) => {
+        const slides = document.querySelectorAll('.hero-slide');
+        const dots = document.querySelectorAll('.hero-dot');
+        
+        slides[currentSlide].classList.remove('active');
+        dots[currentSlide].classList.remove('active');
+        
+        currentSlide = index;
+        
+        slides[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+        
+        // Reset autoplay
+        stopAutoplay();
+        startAutoplay();
+    };
+
+    // Next slide
+    const nextSlide = () => {
+        const nextIndex = (currentSlide + 1) % featuredMedia.length;
+        goToSlide(nextIndex);
+    };
+
+    // Previous slide
+    const prevSlide = () => {
+        const prevIndex = (currentSlide - 1 + featuredMedia.length) % featuredMedia.length;
+        goToSlide(prevIndex);
+    };
+
+    // Autoplay
+    const startAutoplay = () => {
+        autoplayInterval = setInterval(nextSlide, 5000); // Change slide every 5 seconds
+    };
+
+    const stopAutoplay = () => {
+        clearInterval(autoplayInterval);
+    };
+
+    // Navigation button handlers
+    document.getElementById('hero-prev').addEventListener('click', prevSlide);
+    document.getElementById('hero-next').addEventListener('click', nextSlide);
+
+    // Initialize hero carousel
+    initHeroCarousel();
 
     // Function to create media card
     const createMediaCard = (item) => {
-        const placeholderImg = `https://via.placeholder.com/200x300/2c313a/ffffff?text=${encodeURIComponent(item.Title)}`;
+        const posterImg = item.poster_url || `https://via.placeholder.com/200x300/2c313a/ffffff?text=${encodeURIComponent(item.Title)}`;
         return `
             <a href="/media/${item.MediaID}" class="flex-shrink-0 w-poster-w h-poster-h rounded-lg shadow-lg transform hover:scale-105 hover:z-10 transition-transform duration-300 cursor-pointer">
-                <img src="${placeholderImg}" alt="${item.Title}" class="w-full h-full object-cover rounded-lg">
+                <img src="${posterImg}" alt="${item.Title}" class="w-full h-full object-cover rounded-lg">
                 <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
                     <p class="text-white text-sm font-semibold">${item.Title}</p>
                 </div>
