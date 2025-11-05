@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sirène - Your Entertainment Hub{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='taskbar.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,14 +39,14 @@
         <nav class="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
             <!-- Logo and Main Nav -->
             <div class="flex items-center space-x-8">
-                <a href="{{ url_for('index') }}" class="text-3xl font-bold text-brand-red tracking-wider">
-                    Sirène
+                <a href="{{ url_for('index') }}" class="flex items-center">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Sirène Logo" class="h-20 w-auto">
                 </a>
                 
                 {% if session.user_id %}
                 <div class="hidden md:flex space-x-6">
                     <a href="{{ url_for('index') }}" class="text-gray-300 hover:text-white transition">Home</a>
-                    <a href="{{ url_for('search') }}" class="text-gray-300 hover:text-white transition">Browse</a>
+                    <a href="{{ url_for('browse') }}" class="text-gray-300 hover:text-white transition">Browse</a>
                     <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white transition">Profile</a>
 
                     {% if session.user_role == 'admin' %}
@@ -88,7 +89,7 @@
     </header>
 
     <!-- Search Overlay -->
-    <div id="search-overlay" class="hidden fixed inset-0 z-50 bg-brand-black/90 backdrop-blur-sm p-4 pt-20 sm:p-8 sm:pt-24">
+    <div id="search-overlay" class="hidden fixed inset-0 z-50 bg-brand-black/90 backdrop-blur-sm p-4 pt-20 sm:p-8 sm:pt-24" style="display: none; pointer-events: none;">
         <button id="search-close-button" class="absolute top-6 right-6 text-gray-400 hover:text-white">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

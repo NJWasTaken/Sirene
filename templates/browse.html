@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Browse - Sirène{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold mb-8">Browse Content</h1>
+    
+    <!-- Filters Section -->
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Filters</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Media Type Filter -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Media Type</label>
+                <select id="type-filter" class="w-full bg-brand-black text-white px-4 py-2 rounded-lg border border-gray-700 focus:border-brand-red focus:outline-none">
+                    <option value="">All Types</option>
+                    <option value="Movie">Movies</option>
+                    <option value="TV Show">TV Shows</option>
+                    <option value="Anime">Anime</option>
+                    <option value="Video Game">Video Games</option>
+                </select>
+            </div>
+            
+            <!-- Genre Filter -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Genre</label>
+                <select id="genre-filter" class="w-full bg-brand-black text-white px-4 py-2 rounded-lg border border-gray-700 focus:border-brand-red focus:outline-none">
+                    <option value="">All Genres</option>
+                    {% for genre in genres %}
+                    <option value="{{ genre.GenreName }}">{{ genre.GenreName }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Sort By Filter -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Sort By</label>
+                <select id="sort-filter" class="w-full bg-brand-black text-white px-4 py-2 rounded-lg border border-gray-700 focus:border-brand-red focus:outline-none">
+                    <option value="recent">Most Recent</option>
+                    <option value="rating">Highest Rated</option>
+                    <option value="title">Title (A-Z)</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Apply Filters Button -->
+        <div class="mt-4 flex gap-4">
+            <button id="apply-filters" class="px-6 py-2 bg-brand-red text-white rounded-lg hover:bg-red-700 transition">
+                Apply Filters
+            </button>
+            <button id="clear-filters" class="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition">
+                Clear Filters
+            </button>
+        </div>
+    </div>
+    
+    <!-- Results Section -->
+    <div class="mb-4">
+        <h2 class="text-2xl font-semibold" id="results-title">All Content</h2>
+        <p class="text-gray-400 mt-1" id="results-count">Loading...</p>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div class="animate-pulse">
+            <div class="bg-brand-gray rounded-lg h-72 mb-2"></div>
+            <div class="bg-brand-gray rounded h-4 w-3/4"></div>
+        </div>
+        <div class="animate-pulse">
+            <div class="bg-brand-gray rounded-lg h-72 mb-2"></div>
+            <div class="bg-brand-gray rounded h-4 w-3/4"></div>
+        </div>
+        <div class="animate-pulse">
+            <div class="bg-brand-gray rounded-lg h-72 mb-2"></div>
+            <div class="bg-brand-gray rounded h-4 w-3/4"></div>
+        </div>
+    </div>
+    
+    <!-- Results Grid -->
+    <div id="results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 hidden">
+        <!-- Results will be populated here by JavaScript -->
+    </div>
+    
+    <!-- No Results Message -->
+    <div id="no-results" class="hidden text-center py-16">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-xl text-gray-400">No content found with the selected filters.</p>
+        <button onclick="document.getElementById('clear-filters').click()" class="mt-4 px-6 py-2 bg-brand-red text-white rounded-lg hover:bg-red-700 transition">
+            Clear Filters
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const typeFilter = document.getElementById('type-filter');
+    const genreFilter = document.getElementById('genre-filter');
+    const sortFilter = document.getElementById('sort-filter');
+    const applyButton = document.getElementById('apply-filters');
+    const clearButton = document.getElementById('clear-filters');
+    const resultsContainer = document.getElementById('results');
+    const loadingContainer = document.getElementById('loading');
+    const noResultsContainer = document.getElementById('no-results');
+    const resultsTitle = document.getElementById('results-title');
+    const resultsCount = document.getElementById('results-count');
+    
+    // Create media card
+    const createMediaCard = (item) => {
+        const posterImg = item.poster_url || `https://via.placeholder.com/300x450/2c313a/ffffff?text=${encodeURIComponent(item.Title)}`;
+        const rating = item.avg_rating ? parseFloat(item.avg_rating).toFixed(1) : 'N/A';
+        
+        return `
+            <a href="/media/${item.MediaID}" class="group">
+                <div class="relative overflow-hidden rounded-lg shadow-lg bg-brand-gray">
+                    <img src="${posterImg}" 
+                         alt="${item.Title}" 
+                         class="w-full h-72 object-cover group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute top-2 right-2 bg-black/80 px-2 py-1 rounded text-sm font-bold">
+                        ${rating !== 'N/A' ? '⭐ ' + rating : 'No ratings'}
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
+                        <p class="font-semibold text-sm line-clamp-2">${item.Title}</p>
+                        <p class="text-xs text-gray-300 mt-1">${item.MediaType}</p>
+                    </div>
+                </div>
+            </a>
+        `;
+    };
+    
+    // Fetch and display results
+    const fetchResults = async () => {
+        const type = typeFilter.value;
+        const genre = genreFilter.value;
+        const sort = sortFilter.value;
+        
+        // Build query params
+        const params = new URLSearchParams();
+        if (type) params.append('type', type);
+        if (genre) params.append('genre', genre);
+        if (sort) params.append('sort', sort);
+        
+        // Show loading
+        loadingContainer.classList.remove('hidden');
+        resultsContainer.classList.add('hidden');
+        noResultsContainer.classList.add('hidden');
+        
+        try {
+            const response = await fetch(`/api/browse?${params.toString()}`);
+            const data = await response.json();
+            
+            // Hide loading
+            loadingContainer.classList.add('hidden');
+            
+            if (data.length === 0) {
+                noResultsContainer.classList.remove('hidden');
+                resultsCount.textContent = 'No results found';
+            } else {
+                resultsContainer.classList.remove('hidden');
+                resultsContainer.innerHTML = data.map(item => createMediaCard(item)).join('');
+                resultsCount.textContent = `Showing ${data.length} result${data.length !== 1 ? 's' : ''}`;
+                
+                // Update title
+                if (type) {
+                    resultsTitle.textContent = `${type}${genre ? ` - ${genre}` : ''}`;
+                } else if (genre) {
+                    resultsTitle.textContent = genre;
+                } else {
+                    resultsTitle.textContent = 'All Content';
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching results:', error);
+            loadingContainer.classList.add('hidden');
+            noResultsContainer.classList.remove('hidden');
+            resultsCount.textContent = 'Error loading content';
+        }
+    };
+    
+    // Clear filters
+    const clearFilters = () => {
+        typeFilter.value = '';
+        genreFilter.value = '';
+        sortFilter.value = 'recent';
+        fetchResults();
+    };
+    
+    // Event listeners
+    applyButton.addEventListener('click', fetchResults);
+    clearButton.addEventListener('click', clearFilters);
+    
+    // Allow Enter key to apply filters
+    [typeFilter, genreFilter, sortFilter].forEach(filter => {
+        filter.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchResults();
+        });
+    });
+    
+    // Initial load
+    fetchResults();
+});
+</script>
+{% endblock %}

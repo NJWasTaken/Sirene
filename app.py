@@ -1,3 +1,6 @@
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -67,7 +70,7 @@ def login():
         if user and check_password_hash(user['PasswordHash'], password):
             session['user_id'] = user['UserID']
             session['username'] = user['Username']
-            session['user_role'] = user['UserRole']
+            session['user_role'] = user.get('UserRole', 'user')  # Default to 'user' if column missing
             return redirect(url_for('index'))
         else:
             return render_template('login.html', error="Invalid credentials")
@@ -380,8 +383,9 @@ def search():
     
     # Build the query
     sql = """
-        SELECT DISTINCT m.*, 
-               GROUP_CONCAT(DISTINCT g.GenreName) as genres
+        SELECT m.MediaID, m.Title, m.MediaType, m.Synopsis, m.ReleaseDate, m.DurationMinutes,
+               GROUP_CONCAT(DISTINCT g.GenreName) as genres,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM media m
         LEFT JOIN media_genre mg ON m.MediaID = mg.MediaID
         LEFT JOIN genre g ON mg.GenreID = g.GenreID
@@ -401,10 +405,18 @@ def search():
         sql += " AND g.GenreName = %s"
         params.append(genre)
     
-    sql += " GROUP BY m.MediaID ORDER BY m.ReleaseDate DESC"
+    sql += " GROUP BY m.MediaID, m.Title, m.MediaType, m.Synopsis, m.ReleaseDate, m.DurationMinutes ORDER BY m.ReleaseDate DESC"
     
-    cur.execute(sql, params)
+    if params:
+        cur.execute(sql, params)
+    else:
+        cur.execute(sql)
+    
     results = cur.fetchall()
+    print(f"Search Debug - Query: '{query}', Type: '{media_type}', Genre: '{genre}'")
+    print(f"Search Debug - Results count: {len(results)}")
+    if results and len(results) > 0:
+        print(f"Search Debug - First result: {results[0]}")
     
     # Get all genres for filter dropdown
     cur.execute("SELECT DISTINCT GenreName FROM genre ORDER BY GenreName")
@@ -419,6 +431,70 @@ def search():
                          selected_type=media_type,
                          selected_genre=genre)
 
+@app.route('/browse')
+@login_required
+def browse():
+    """Browse page with filters"""
+    cur = mysql.connection.cursor()
+    
+    # Get all genres for filter
+    cur.execute("SELECT DISTINCT GenreName FROM genre ORDER BY GenreName")
+    genres = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('browse.html', genres=genres)
+
+@app.route('/api/browse')
+@login_required
+def api_browse():
+    """API endpoint for browse with filters"""
+    media_type = request.args.get('type', '')
+    genre = request.args.get('genre', '')
+    sort_by = request.args.get('sort', 'recent')  # recent, rating, title
+    
+    cur = mysql.connection.cursor()
+    
+    # Build the query
+    sql = """
+        SELECT DISTINCT m.*, 
+               AVG(r.Rating) as avg_rating,
+               COUNT(r.ReviewID) as review_count,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
+        FROM media m
+        LEFT JOIN review r ON m.MediaID = r.MediaID
+        LEFT JOIN media_genre mg ON m.MediaID = mg.MediaID
+        LEFT JOIN genre g ON mg.GenreID = g.GenreID
+        WHERE 1=1
+    """
+    params = []
+    
+    if media_type:
+        sql += " AND m.MediaType = %s"
+        params.append(media_type)
+    
+    if genre:
+        sql += " AND g.GenreName = %s"
+        params.append(genre)
+    
+    sql += " GROUP BY m.MediaID"
+    
+    # Add sorting
+    if sort_by == 'rating':
+        sql += " ORDER BY avg_rating DESC, review_count DESC"
+    elif sort_by == 'title':
+        sql += " ORDER BY m.Title ASC"
+    else:  # recent
+        sql += " ORDER BY m.ReleaseDate DESC"
+    
+    sql += " LIMIT 50"
+    
+    cur.execute(sql, params)
+    results = cur.fetchall()
+    cur.close()
+    
+    return jsonify(results)
+
 # API Routes for dynamic content
 @app.route('/api/media/trending')
 @login_required
@@ -426,7 +502,8 @@ def api_trending():
     """Get trending media (based on recent reviews)"""
     cur = mysql.connection.cursor()
     cur.execute("""
-        SELECT m.*, COUNT(r.ReviewID) as review_count, AVG(r.Rating) as avg_rating
+        SELECT m.*, COUNT(r.ReviewID) as review_count, AVG(r.Rating) as avg_rating,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM media m
         LEFT JOIN review r ON m.MediaID = r.MediaID
         WHERE r.ReviewDate >= DATE_SUB(NOW(), INTERVAL 30 DAY)
@@ -444,7 +521,8 @@ def api_top_rated():
     """Get top-rated media"""
     cur = mysql.connection.cursor()
     cur.execute("""
-        SELECT m.*, AVG(r.Rating) as avg_rating, COUNT(r.ReviewID) as review_count
+        SELECT m.*, AVG(r.Rating) as avg_rating, COUNT(r.ReviewID) as review_count,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM media m
         LEFT JOIN review r ON m.MediaID = r.MediaID
         GROUP BY m.MediaID
@@ -462,7 +540,8 @@ def api_recent():
     """Get recently released media"""
     cur = mysql.connection.cursor()
     cur.execute("""
-        SELECT m.*
+        SELECT m.*,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM media m
         WHERE m.ReleaseDate <= CURDATE()
         ORDER BY m.ReleaseDate DESC
@@ -491,7 +570,8 @@ def api_media_by_type(media_type):
         return jsonify([])
     
     cur.execute("""
-        SELECT m.*, AVG(r.Rating) as avg_rating
+        SELECT m.*, AVG(r.Rating) as avg_rating,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM media m
         LEFT JOIN review r ON m.MediaID = r.MediaID
         WHERE m.MediaType = %s
@@ -506,7 +586,7 @@ def api_media_by_type(media_type):
 @app.route('/api/search')
 @login_required
 def api_search():
-    """API endpoint for search"""
+    """API endpoint for search autocomplete"""
     query = request.args.get('q', '')
     
     if len(query) < 2:
@@ -516,16 +596,22 @@ def api_search():
     cur.execute("""
         SELECT m.*, 
                GROUP_CONCAT(DISTINCT g.GenreName) as genres,
-               AVG(r.Rating) as avg_rating
+               AVG(r.Rating) as avg_rating,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM media m
         LEFT JOIN media_genre mg ON m.MediaID = mg.MediaID
         LEFT JOIN genre g ON mg.GenreID = g.GenreID
         LEFT JOIN review r ON m.MediaID = r.MediaID
         WHERE m.Title LIKE %s OR m.Synopsis LIKE %s
         GROUP BY m.MediaID
-        ORDER BY m.ReleaseDate DESC
-        LIMIT 20
-    """, [f"%{query}%", f"%{query}%"])
+        ORDER BY 
+            CASE 
+                WHEN m.Title LIKE %s THEN 1
+                ELSE 2
+            END,
+            m.Title ASC
+        LIMIT 10
+    """, [f"%{query}%", f"%{query}%", f"{query}%"])
     results = cur.fetchall()
     cur.close()
     
@@ -535,14 +621,36 @@ def api_search():
         formatted_results.append({
             'id': item['MediaID'],
             'title': item['Title'],
-            'media_type': item['MediaType'].lower().replace(' ', ''),
-            'synopsis': item['Synopsis'],
+            'media_type': item['MediaType'],
+            'synopsis': item['Synopsis'][:150] + '...' if item['Synopsis'] and len(item['Synopsis']) > 150 else item['Synopsis'],
             'release_date': str(item['ReleaseDate']) if item['ReleaseDate'] else None,
             'genres': item['genres'],
-            'avg_rating': float(item['avg_rating']) if item['avg_rating'] else 0
+            'avg_rating': float(item['avg_rating']) if item['avg_rating'] else 0,
+            'poster_url': item['poster_url']
         })
     
     return jsonify(formatted_results)
+
+@app.route('/api/media/featured')
+@login_required
+def api_featured():
+    """Get 4 random featured media items with backdrop images"""
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        SELECT m.*, 
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Backdrop' LIMIT 1) as backdrop_url,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url,
+               AVG(r.Rating) as avg_rating
+        FROM media m
+        LEFT JOIN review r ON m.MediaID = r.MediaID
+        WHERE EXISTS (SELECT 1 FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Backdrop')
+        GROUP BY m.MediaID
+        ORDER BY RAND()
+        LIMIT 4
+    """)
+    results = cur.fetchall()
+    cur.close()
+    return jsonify(results)
 
 @app.route('/api/review', methods=['POST'])
 @login_required
@@ -577,7 +685,8 @@ def profile():
     
     # Get user's reviews
     cur.execute("""
-        SELECT r.*, m.Title
+        SELECT r.*, m.Title, m.MediaType,
+               (SELECT ImageUrl FROM mediaimage WHERE MediaID = m.MediaID AND Type = 'Poster' LIMIT 1) as poster_url
         FROM review r
         JOIN media m ON r.MediaID = m.MediaID
         WHERE r.UserID = %s
