@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Cast - Sirène{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-3xl">
+    <a href="{{ url_for('admin_edit_media', media_id=media.MediaID) }}" class="text-sm text-brand-red hover:text-red-500">&larr; Back to Edit Media</a>
+    <h1 class="text-3xl font-bold mt-2">Manage Cast & Crew</h1>
+    <h2 class="text-xl text-gray-400 mb-6">{{ media.Title }}</h2>
+
+    <div class="bg-brand-gray rounded-lg p-6 mb-8">
+        <h3 class="text-2xl font-bold mb-4">Add Person</h3>
+        <form method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="hidden" name="action" value="add">
+            
+            <div class="md:col-span-2">
+                <label for="person_id" class="block text-sm font-medium mb-2">Person</label>
+                <select name="person_id" id="person_id" required
+                        class="w-full px-3 py-2 bg-brand-black border border-brand-light-gray rounded-lg text-white">
+                    <option value="">Select a person...</option>
+                    {% for person in all_people %}
+                    <option value="{{ person.PersonID }}">{{ person.Name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="role" class="block text-sm font-medium mb-2">Role</label>
+                <input type="text" name="role" id="role" placeholder="e.g., Actor" required
+                       class="w-full px-3 py-2 bg-brand-black border border-brand-light-gray rounded-lg text-white">
+            </div>
+            
+            <div class="md:col-span-3">
+                <button type="submit" class="w-full py-2 bg-brand-red rounded-lg hover:bg-red-600 transition">
+                    Add to Cast/Crew
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-brand-gray rounded-lg p-6">
+        <h3 class="text-2xl font-bold mb-4">Current Cast & Crew</h3>
+        <div class="space-y-3">
+            {% for person in linked_cast %}
+            <div class="flex items-center justify-between bg-brand-black p-3 rounded-lg">
+                <div>
+                    <p class="font-semibold">{{ person.Name }}</p>
+                    <p class="text-sm text-gray-400">{{ person.Role }}</p>
+                </div>
+                
+                <form method="POST">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="person_id" value="{{ person.PersonID }}">
+                    <input type="hidden" name="role" value="{{ person.Role }}">
+                    <button type="submit" class="px-3 py-1 bg-red-800 text-white text-sm rounded hover:bg-red-700 transition">
+                        Remove
+                    </button>
+                </form>
+            </div>
+            {% else %}
+            <p class="text-gray-400">No cast or crew have been added yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

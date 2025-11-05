@@ -11,33 +11,79 @@
         </a>
     </div>
 
+    <form method="GET" action="{{ url_for('admin_dashboard') }}" class="bg-brand-gray rounded-lg p-4 mb-6 flex items-end gap-4">
+        <div>
+            <label for="type-filter" class="block text-sm font-medium mb-2">Filter by Type</label>
+            <select name="type" id="type-filter" class="w-full px-3 py-2 bg-brand-black border border-brand-light-gray rounded-lg text-white focus:outline-none focus:border-brand-red">
+                <option value="">All Types</option>
+                {% for media_type in media_types %}
+                <option value="{{ media_type }}" {% if media_type == filter_type %}selected{% endif %}>
+                    {{ media_type }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="px-6 py-2 bg-brand-red text-white rounded-lg hover:bg-red-600 transition">
+            Filter
+        </button>
+        <a href="{{ url_for('admin_dashboard') }}" class="px-6 py-2 bg-brand-light-gray text-white rounded-lg hover:bg-gray-500 transition">
+            Clear
+        </a>
+    </form>
+
     <div class="bg-brand-gray rounded-lg p-6">
         <h2 class="text-2xl font-bold mb-4">Manage Media</h2>
-        <table class="w-full text-left">
-            <thead>
-                <tr class="border-b border-brand-light-gray">
-                    <th class="py-2">ID</th>
-                    <th class="py-2">Title</th>
-                    <th class="py-2">Type</th>
-                    <th class="py-2">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in all_media %}
-                <tr class="border-b border-brand-light-gray">
-                    <td class="py-3">{{ item.MediaID }}</td>
-                    <td class="py-3">{{ item.Title }}</td>
-                    <td class="py-3">{{ item.MediaType }}</td>
-                    <td class="py-3">
-                        <a href="{{ url_for('admin_edit_media', media_id=item.MediaID) }}" class="text-blue-400 hover:text-blue-300 mr-4">Edit</a>
-                        <form action="{{ url_for('admin_delete_media', media_id=item.MediaID) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this?');">
-                            <button type="submit" class="text-red-500 hover:text-red-400">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left min-w-[600px]">
+                <thead>
+                    <tr class="border-b border-brand-light-gray">
+                        <th class="py-2">ID</th>
+                        <th class="py-2">Title</th>
+                        <th class="py-2">Type</th>
+                        <th class="py-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in all_media %}
+                    <tr class="border-b border-brand-light-gray">
+                        <td class="py-3">{{ item.MediaID }}</td>
+                        <td class="py-3">{{ item.Title }}</td>
+                        <td class="py-3">{{ item.MediaType }}</td>
+                        <td class="py-3 whitespace-nowrap">
+                            <a href="{{ url_for('admin_edit_media', media_id=item.MediaID) }}" class="text-blue-400 hover:text-blue-300 mr-4">Edit</a>
+                            <form action="{{ url_for('admin_delete_media', media_id=item.MediaID) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this?');">
+                                <button type="submit" class="text-red-500 hover:text-red-400">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="py-4 text-center text-gray-400">No media found for this filter.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    
+    {% if total_pages > 1 %}
+    <div class="mt-8 flex justify-center items-center gap-4">
+        {% if page > 1 %}
+        <a href="{{ url_for('admin_dashboard', page=page-1, type=filter_type) }}" 
+           class="px-4 py-2 bg-brand-light-gray rounded hover:bg-brand-gray">
+            &larr; Previous
+        </a>
+        {% endif %}
+        
+        <span class="text-gray-400">Page {{ page }} of {{ total_pages }}</span>
+        
+        {% if page < total_pages %}
+        <a href="{{ url_for('admin_dashboard', page=page+1, type=filter_type) }}" 
+           class="px-4 py-2 bg-brand-light-gray rounded hover:bg-brand-gray">
+            Next &rarr;
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

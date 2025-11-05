@@ -8,6 +8,7 @@ from datetime import datetime
 import os
 from functools import wraps
 import dotenv
+from math import ceil
 
 dotenv.load_dotenv()
 
@@ -107,16 +108,51 @@ def register():
 @admin_required
 def admin_dashboard():
     """Admin dashboard to manage content"""
+
+    # Pagination
+    PER_PAGE = 20
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * PER_PAGE
+    
+    # Filtering
+    filter_type = request.args.get('type', '')
+    media_types = ['Movie', 'TV Show', 'Anime', 'Video Game']
+    
+    base_query = "FROM media WHERE 1=1"
+    params = []
+    
+    if filter_type:
+        base_query += " AND MediaType = %s"
+        params.append(filter_type)
+
     cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM media ORDER BY Title")
+    
+    # Get total count for pagination
+    cur.execute(f"SELECT COUNT(*) as count {base_query}", params)
+    total_count = cur.fetchone()['count']
+    total_pages = ceil(total_count / PER_PAGE)
+    
+    # Get media for the current page
+    query = f"SELECT * {base_query} ORDER BY Title ASC LIMIT %s OFFSET %s"
+    params.extend([PER_PAGE, offset])
+    
+    cur.execute(query, params)
     all_media = cur.fetchall()
     cur.close()
-    return render_template('admin_dashboard.html', all_media=all_media)
+    
+    return render_template('admin_dashboard.html', 
+                         all_media=all_media,
+                         page=page,
+                         total_pages=total_pages,
+                         filter_type=filter_type,
+                         media_types=media_types)
 
 @app.route('/admin/media/new', methods=['GET', 'POST'])
 @admin_required
 def admin_add_media():
     """Add a new media item"""
+    cur = mysql.connection.cursor()
+
     if request.method == 'POST':
         title = request.form['title']
         synopsis = request.form['synopsis']
@@ -124,17 +160,44 @@ def admin_add_media():
         release_date = request.form['release_date'] or None
         duration = request.form['duration'] or None
 
-        cur = mysql.connection.cursor()
         cur.execute("""
             INSERT INTO media (Title, Synopsis, MediaType, ReleaseDate, DurationMinutes)
             VALUES (%s, %s, %s, %s, %s)
         """, (title, synopsis, media_type, release_date, duration))
         mysql.connection.commit()
+        
+        # Get the new MediaID
+        new_media_id = cur.lastrowid
+
+        # Link platforms if any selected
+        platform_ids = request.form.getlist('platform_ids')
+        if platform_ids:
+            insert_data = [(new_media_id, pid) for pid in platform_ids]
+            cur.executemany("INSERT INTO media_platform (MediaID, PlatformID) VALUES (%s, %s)", insert_data)
+            mysql.connection.commit()
+        
         cur.close()
         
-        return redirect(url_for('admin_dashboard'))
+        # Redirect to the new edit page to add genres/cast
+        return redirect(url_for('admin_edit_media', media_id=new_media_id))
 
-    return render_template('admin_edit_media.html', media=None, title="Add New Media")
+    # GET request
+    # Fetch all genres to display on the form
+    cur.execute("SELECT * FROM genre ORDER BY GenreName")
+    all_genres = cur.fetchall()
+    # Fetch all platforms to display "Available On" options
+    cur.execute("SELECT PlatformID, PlatformName FROM platform ORDER BY PlatformName")
+    all_platforms = cur.fetchall()
+
+    cur.close()
+
+    return render_template('admin_edit_media.html', 
+                         media=None, 
+                         title="Add New Media",
+                         all_genres=all_genres,
+                         all_platforms=all_platforms,
+                         linked_genre_ids=set(),
+                         linked_platform_ids=set())
 
 @app.route('/admin/media/<int:media_id>/edit', methods=['GET', 'POST'])
 @admin_required
@@ -143,6 +206,7 @@ def admin_edit_media(media_id):
     cur = mysql.connection.cursor()
     
     if request.method == 'POST':
+        # 1. Update Media Details
         title = request.form['title']
         synopsis = request.form['synopsis']
         media_type = request.form['media_type']
@@ -154,20 +218,64 @@ def admin_edit_media(media_id):
             SET Title = %s, Synopsis = %s, MediaType = %s, ReleaseDate = %s, DurationMinutes = %s
             WHERE MediaID = %s
         """, (title, synopsis, media_type, release_date, duration, media_id))
-        mysql.connection.commit()
-        cur.close()
         
-        return redirect(url_for('admin_dashboard'))
+        # 2. Update Genres
+        genre_ids = request.form.getlist('genre_ids')
+        platform_ids = request.form.getlist('platform_ids')
+        try:
+            # Delete old genres first
+            cur.execute("DELETE FROM media_genre WHERE MediaID = %s", [media_id])
+            
+            # Insert new genres if any were selected
+            if genre_ids:
+                insert_data = [(media_id, genre_id) for genre_id in genre_ids]
+                cur.executemany("INSERT INTO media_genre (MediaID, GenreID) VALUES (%s, %s)", insert_data)
+            
+            # Delete old platform links
+            cur.execute("DELETE FROM media_platform WHERE MediaID = %s", [media_id])
+            # Insert new platform links
+            if platform_ids:
+                insert_plat = [(media_id, pid) for pid in platform_ids]
+                cur.executemany("INSERT INTO media_platform (MediaID, PlatformID) VALUES (%s, %s)", insert_plat)
+            
+            mysql.connection.commit()
+        except Exception as e:
+            mysql.connection.rollback()
+            print(f"Error updating genres: {e}") 
+        
+        cur.close()
+        return redirect(url_for('admin_edit_media', media_id=media_id))
 
-    # GET request: fetch media and show form
+    # GET request: fetch media, all genres, and linked genres
     cur.execute("SELECT * FROM media WHERE MediaID = %s", [media_id])
     media = cur.fetchone()
+    
+    cur.execute("SELECT * FROM genre ORDER BY GenreName")
+    all_genres = cur.fetchall()
+    
+    cur.execute("SELECT GenreID FROM media_genre WHERE MediaID = %s", [media_id])
+    linked_genres_raw = cur.fetchall()
+    linked_genre_ids = {g['GenreID'] for g in linked_genres_raw} # Use a set
+    
+    # Fetch available platforms and linked platforms
+    cur.execute("SELECT PlatformID, PlatformName FROM platform ORDER BY PlatformName")
+    all_platforms = cur.fetchall()
+    cur.execute("SELECT PlatformID FROM media_platform WHERE MediaID = %s", [media_id])
+    linked_platforms_raw = cur.fetchall()
+    linked_platform_ids = {p['PlatformID'] for p in linked_platforms_raw}
+
     cur.close()
     
     if not media:
         return redirect(url_for('admin_dashboard'))
 
-    return render_template('admin_edit_media.html', media=media, title="Edit Media")
+    return render_template('admin_edit_media.html', 
+                         media=media, 
+                         title="Edit Media",
+                         all_genres=all_genres,
+                         all_platforms=all_platforms,
+                         linked_genre_ids=linked_genre_ids,
+                         linked_platform_ids=linked_platform_ids)
 
 @app.route('/admin/media/<int:media_id>/delete', methods=['POST'])
 @admin_required
@@ -230,6 +338,68 @@ def admin_manage_media_assets(media_id):
         return redirect(url_for('admin_dashboard'))
 
     return render_template('admin_manage_media_assets.html', media=media, images=images, videos=videos)
+
+@app.route('/admin/media/<int:media_id>/cast', methods=['GET', 'POST'])
+@admin_required
+def admin_manage_media_cast(media_id):
+    """Manage cast & crew for a specific media item"""
+    cur = mysql.connection.cursor()
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        try:
+            if action == 'add':
+                person_id = request.form.get('person_id')
+                role = request.form.get('role', 'Actor').strip()
+                if person_id and role:
+                    cur.execute("""
+                        INSERT INTO media_person_role (MediaID, PersonID, Role)
+                        VALUES (%s, %s, %s)
+                    """, (media_id, person_id, role))
+
+            elif action == 'delete':
+                person_id = request.form.get('person_id')
+                role = request.form.get('role')
+                if person_id and role:
+                    cur.execute("""
+                        DELETE FROM media_person_role
+                        WHERE MediaID = %s AND PersonID = %s AND Role = %s
+                    """, (media_id, person_id, role))
+                    
+            mysql.connection.commit()
+        except Exception as e:
+            mysql.connection.rollback()
+            print(f"Error managing cast: {e}")
+        
+        cur.close()
+        return redirect(url_for('admin_manage_media_cast', media_id=media_id))
+
+    # GET Request
+    cur.execute("SELECT MediaID, Title FROM media WHERE MediaID = %s", [media_id])
+    media = cur.fetchone()
+    
+    cur.execute("""
+        SELECT p.PersonID, p.Name, mpr.Role
+        FROM media_person_role mpr
+        JOIN person p ON mpr.PersonID = p.PersonID
+        WHERE mpr.MediaID = %s
+        ORDER BY p.Name, mpr.Role
+    """, [media_id])
+    linked_cast = cur.fetchall()
+    
+    cur.execute("SELECT PersonID, Name FROM person ORDER BY Name")
+    all_people = cur.fetchall()
+    
+    cur.close()
+    
+    if not media:
+        return redirect(url_for('admin_dashboard'))
+        
+    return render_template('admin_manage_media_cast.html',
+                         media=media,
+                         linked_cast=linked_cast,
+                         all_people=all_people)
 
 @app.route('/admin/image/<int:image_id>/delete', methods=['POST'])
 @admin_required

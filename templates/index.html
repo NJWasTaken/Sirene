@@ -65,6 +65,18 @@
         </div>
     </div>
 
+    <!-- Video Games -->
+    <div>
+        <h2 class="text-2xl font-bold mb-4">Video Games</h2>
+        <div id="carousel-games" class="flex overflow-x-auto carousel-scrollbar space-x-4 py-4">
+            <!-- Content will be loaded dynamically -->
+            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
+            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
+            <div class="flex-shrink-0 w-poster-w h-poster-h rounded-lg bg-brand-gray animate-pulse"></div>
+        </div>
+    </div>
+
+
     {% endif %}
 
 </section>
@@ -242,8 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loggedIn) {
         // Load all content only for logged-in users
-        fetchAndPopulate('/api/media/trending', 'carousel-trending');
-        fetchAndPopulate('/api/media/top-rated', 'carousel-top-rated');
+        fetchAndPopulate('/api/media/games', 'carousel-games');
         fetchAndPopulate('/api/media/movies', 'carousel-movies');
         fetchAndPopulate('/api/media/tv', 'carousel-tv');
         fetchAndPopulate('/api/media/anime', 'carousel-anime');

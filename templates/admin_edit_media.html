@@ -7,6 +7,7 @@
     <h1 class="text-3xl font-bold mb-6">{{ title }}</h1>
 
     <form method="POST" class="bg-brand-gray rounded-lg p-6 space-y-4">
+        
         <div>
             <label for="title" class="block text-sm font-medium text-gray-300">Title</label>
             <input type="text" name="title" id="title" value="{{ media.Title if media else '' }}"
@@ -43,17 +44,48 @@
             <input type="number" name="duration" id="duration" value="{{ media.DurationMinutes if media else '' }}"
                    class="mt-1 appearance-none rounded-md relative block w-full px-3 py-3 bg-brand-light-gray border border-brand-light-gray placeholder-gray-500 text-white focus:outline-none focus:ring-brand-red focus:border-brand-red sm:text-sm">
         </div>
+        
+        <div class="pt-4">
+            <label class="block text-lg font-medium text-gray-300 mb-3">Genres</label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-brand-black rounded-lg">
+                {% for genre in all_genres %}
+                <label class="flex items-center space-x-2 cursor-pointer hover:text-brand-red">
+                    <input type="checkbox" name="genre_ids" value="{{ genre.GenreID }}"
+                           {% if genre.GenreID in linked_genre_ids %}checked{% endif %}
+                           class="form-checkbox h-5 w-5 bg-brand-light-gray border-gray-600 text-brand-red focus:ring-brand-red">
+                    <span>{{ genre.GenreName }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="pt-4">
+            <label class="block text-lg font-medium text-gray-300 mb-3">Available On</label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-brand-black rounded-lg">
+            {% for p in all_platforms %}
+                <label class="flex items-center space-x-2 cursor-pointer hover:text-brand-red">
+                <input type="checkbox" name="platform_ids" value="{{ p.PlatformID }}"
+                        {% if p.PlatformID in linked_platform_ids %}checked{% endif %}>
+                {{ p.PlatformName }}
+                </label>
+            {% endfor %}
+            </div>
+        </div>
 
         {% if media %}
-        <div style="padding-bottom: 20px; padding-top: 10px;">
+        <div class="pt-4 space-y-3">
+            <a href="{{ url_for('admin_manage_media_cast', media_id=media.MediaID) }}" 
+               class="block w-full text-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-blue-600 hover:bg-blue-500 transition">
+                Manage Cast & Crew
+            </a>
             <a href="{{ url_for('admin_manage_media_assets', media_id=media.MediaID) }}" 
-            class="px-4 py-2 w-full justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brand-red hover:text-black transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-red">
+               class="block w-full text-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-blue-600 hover:bg-blue-500 transition">
                 Manage Images & Videos
             </a>
         </div>
         {% endif %}
 
-        <div>
+        <div class="pt-4">
             <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-brand-red hover:bg-red-600 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-red">
                 Save Changes
             </button>
