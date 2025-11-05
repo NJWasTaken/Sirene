@@ -551,7 +551,6 @@ def search():
     
     cur = mysql.connection.cursor()
     
-    # Build the query
     sql = """
         SELECT m.MediaID, m.Title, m.MediaType, m.Synopsis, m.ReleaseDate, m.DurationMinutes,
                GROUP_CONCAT(DISTINCT g.GenreName) as genres,
@@ -564,8 +563,8 @@ def search():
     params = []
     
     if query:
-        sql += " AND (m.Title LIKE %s OR m.Synopsis LIKE %s)"
-        params.extend([f"%{query}%", f"%{query}%"])
+        sql += " AND (m.Title LIKE %s)"
+        params.extend([f"%{query}%"])
     
     if media_type:
         sql += " AND m.MediaType = %s"

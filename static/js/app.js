@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (searchOpenBtn && searchOverlay) {
         searchOpenBtn.addEventListener('click', () => {
+            // Don't open overlay if we're already on the search page
+            if (window.location.pathname === '/search') {
+                return;
+            }
             searchOverlay.classList.remove('hidden');
             searchOverlay.style.display = 'block';
             searchOverlay.style.pointerEvents = 'auto';
@@ -77,23 +81,57 @@ document.addEventListener('DOMContentLoaded', () => {
         // Handle Enter key to go to full search results
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();
                 const query = searchInput.value.trim();
                 if (query) {
-                    // Completely remove the overlay from DOM before navigating
-                    if (searchOverlay) {
-                        searchOverlay.remove();
-                    }
-                    // Navigate immediately
+                    // Navigate to search page with query
                     window.location.href = `/search?q=${encodeURIComponent(query)}`;
+                } else {
+                    e.preventDefault();
                 }
             }
         });
     }
 
     // Completely remove search overlay on page load if we're on the search page
-    if (window.location.pathname === '/search' && searchOverlay) {
-        searchOverlay.remove();
+    function hideSearchOverlay() {
+        if (searchOverlay) {
+            searchOverlay.classList.add('hidden');
+            searchOverlay.style.display = 'none';
+            searchOverlay.style.visibility = 'hidden';
+            searchOverlay.style.pointerEvents = 'none';
+            searchOverlay.style.opacity = '0';
+            searchOverlay.style.zIndex = '-9999';
+        }
+    }
+    
+    function removeSearchOverlay() {
+        if (searchOverlay && searchOverlay.parentNode) {
+            searchOverlay.parentNode.removeChild(searchOverlay);
+        }
+    }
+    
+    if (window.location.pathname === '/search' || window.location.pathname.startsWith('/search')) {
+        // Immediately hide it
+        hideSearchOverlay();
+        // Then completely remove it from DOM
+        setTimeout(removeSearchOverlay, 10);
+        setTimeout(removeSearchOverlay, 100);
+        window.addEventListener('load', removeSearchOverlay);
+    }
+    
+    // Also ensure the form in the search overlay properly submits and redirects
+    if (searchInput) {
+        const searchForm = searchInput.closest('form');
+        if (searchForm) {
+            searchForm.addEventListener('submit', (e) => {
+                // Let the form submit naturally, but ensure overlay closes
+                if (searchOverlay) {
+                    setTimeout(() => {
+                        hideSearchOverlay();
+                    }, 10);
+                }
+            });
+        }
     }
 
     // Display search results in dropdown
