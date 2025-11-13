@@ -117,13 +117,16 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-24 bg-brand-gray text-gray-400 py-12">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center text-sm">
-                &copy; 2025 Sirene. All Rights Reserved.
-            </div>
+    <footer class="mt-auto">
+    <div class="relative w-full overflow-hidden" style="height: 50%;">
+        <img src="{{ url_for('static', filename='footer1.jpg') }}" 
+             alt="Footer background"
+             class="absolute inset-0 w-full h-full object-cover opacity-30">
+        <div class="relative z-10 container mx-auto px-4 py-8 text-center">
+            <p class="text-gray-400">&copy; 2025 Sirène. All rights reserved.</p>
         </div>
-    </footer>
+    </div>
+</footer>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}

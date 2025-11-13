@@ -14,14 +14,10 @@
             <input type="hidden" name="action" value="add">
             
             <div class="md:col-span-2">
-                <label for="person_id" class="block text-sm font-medium mb-2">Person</label>
-                <select name="person_id" id="person_id" required
-                        class="w-full px-3 py-2 bg-brand-black border border-brand-light-gray rounded-lg text-white">
-                    <option value="">Select a person...</option>
-                    {% for person in all_people %}
-                    <option value="{{ person.PersonID }}">{{ person.Name }}</option>
-                    {% endfor %}
-                </select>
+                <label for="person_name" class="block text-sm font-medium mb-2">Person</label>
+                <input type="text" name="person_name" id="person_name" required
+                       placeholder="Enter full name (will create if not found)"
+                       class="w-full px-3 py-2 bg-brand-black border border-brand-light-gray rounded-lg text-white">
             </div>
             
             <div>

@@ -351,12 +351,31 @@ def admin_manage_media_cast(media_id):
         try:
             if action == 'add':
                 person_id = request.form.get('person_id')
+                person_name = (request.form.get('person_name') or '').strip()
                 role = request.form.get('role', 'Actor').strip()
+
                 if person_id and role:
                     cur.execute("""
                         INSERT INTO media_person_role (MediaID, PersonID, Role)
                         VALUES (%s, %s, %s)
                     """, (media_id, person_id, role))
+                elif person_name and role:
+                    # try to find existing person by exact name (case-sensitive by DB collation)
+                    cur.execute("SELECT PersonID FROM person WHERE Name = %s LIMIT 1", [person_name])
+                    existing = cur.fetchone()
+                    if existing:
+                        pid = existing['PersonID']
+                    else:
+                        # create new person with minimal data
+                        cur.execute("INSERT INTO person (Name) VALUES (%s)", [person_name])
+                        mysql.connection.commit()
+                        pid = cur.lastrowid
+
+                    cur.execute("""
+                        INSERT INTO media_person_role (MediaID, PersonID, Role)
+                        VALUES (%s, %s, %s)
+                    """, (media_id, pid, role))
+
 
             elif action == 'delete':
                 person_id = request.form.get('person_id')
